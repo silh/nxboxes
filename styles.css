@@ -68,15 +68,9 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 360px) minmax(0, 1.5fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
   align-items: flex-start;
-}
-
-@media (max-width: 900px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .card {
@@ -96,12 +90,54 @@ body {
 }
 
 .form-card {
-  position: sticky;
-  top: 1.5rem;
   align-self: flex-start;
 }
 
+/* Form layout: make Box 3 and Box 2 settings sit side by side on larger screens */
+#investment-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 0.9rem;
+}
+
+/* First fieldset (investment parameters) spans full width */
+#investment-form > fieldset:nth-of-type(1) {
+  grid-column: 1 / -1;
+}
+
+/* Box 3 settings on the left, Box 2 settings on the right */
+#investment-form > fieldset:nth-of-type(2) {
+  grid-column: 1 / 2;
+}
+
+#investment-form > fieldset:nth-of-type(3) {
+  grid-column: 2 / 3;
+}
+
+/* Submit button spans full width under both columns */
+#investment-form > button {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 700px) {
+  /* Stack all form sections on small screens */
+  #investment-form {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.75rem;
+  }
+
+  #investment-form > fieldset:nth-of-type(2),
+  #investment-form > fieldset:nth-of-type(3),
+  #investment-form > button {
+    grid-column: 1 / -1;
+  }
+}
+
 form fieldset {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  column-gap: 0.9rem;
+  row-gap: 0.45rem;
   border: 1px solid rgba(148, 163, 184, 0.32);
   border-radius: var(--radius-md);
   padding: 0.85rem 0.9rem 0.9rem;
@@ -120,7 +156,7 @@ form legend {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  margin-bottom: 0.55rem;
+  margin-bottom: 0;
 }
 
 .field label {
@@ -130,6 +166,7 @@ form legend {
 
 .field input,
 .field select {
+  width: min(100%, 220px);
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.6);
   padding: 0.5rem 0.85rem;
@@ -161,6 +198,12 @@ form legend {
   margin: 0.2rem 0 0;
   font-size: 0.75rem;
   color: var(--color-text-muted);
+}
+
+/* Help text paragraphs inside fieldsets should span full width */
+form fieldset > .help-text {
+  grid-column: 1 / -1;
+  margin-top: 0.15rem;
 }
 
 .primary-button {
