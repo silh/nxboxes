@@ -1,6 +1,7 @@
 import { CombinedYearRow, SimulationResult } from "./types";
-
-declare const Chart: any;
+import { Chart, CategoryScale, LinearScale, LineController, PointElement, LineElement } from "chart.js";
+  
+Chart.register(CategoryScale, LinearScale, LineController, PointElement, LineElement);
 
 let chartInstance: any | null = null;
 
