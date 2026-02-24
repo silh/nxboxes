@@ -25,7 +25,7 @@ function grossFromNet(
   targetNet: number,
   threshold: number,
   rate1: number,
-  rate2: number
+  rate2: number,
 ): { gross: number; tax: number } {
   if (targetNet <= 0) return { gross: 0, tax: 0 };
   const gross1 = targetNet / (1 - rate1);
@@ -113,6 +113,9 @@ function simulateBox2(params: Box2Params): {
     targetNetWithdrawalPerYear,
     annualReturnRate,
     householdType,
+    vpbTier1Threshold,
+    vpbTier1Rate,
+    vpbTier2Rate,
     box2Tier1Threshold,
     box2Tier1Rate,
     box2Tier2Rate,
@@ -138,11 +141,6 @@ function simulateBox2(params: Box2Params): {
     const balanceBeforeReturn = startingBalance + contribution;
     const totalReturn = startingBalance * annualReturnRate;
 
-    const dividendGross = 0;
-
-    const dividendTax = dividendGross * box2Tier1Rate;
-    const dividendNet = dividendGross - dividendTax;
-
     const balanceAfterReturn = balanceBeforeReturn + totalReturn;
 
     let grossWithdrawal = 0;
@@ -153,24 +151,28 @@ function simulateBox2(params: Box2Params): {
       targetNetWithdrawalPerYear > 0 &&
       balanceAfterReturn > 0
     ) {
-      const { gross, tax } = grossFromNet(
+      // first calculate gross after dividend tax (which applies af VPB)
+      const { gross: grossBeforeVPB, tax: dividendTax } = grossFromNet(
         targetNetWithdrawalPerYear,
-        box2Threshold,
+        box2Tier1Threshold,
         box2Tier1Rate,
-        box2Tier2Rate
+        box2Tier2Rate,
       );
+      // then calculate VPB on the gross amount (which applies before dividend tax)
+      const { gross, tax: vpbTax } = grossFromNet(
+        grossBeforeVPB,
+        vpbTier1Threshold,
+        vpbTier1Rate,
+        vpbTier2Rate,
+      );
+
       grossWithdrawal = Math.min(gross, balanceAfterReturn);
-      withdrawalTax = twoTierTax(
-        grossWithdrawal,
-        box2Threshold,
-        box2Tier1Rate,
-        box2Tier2Rate
-      );
+      withdrawalTax = dividendTax + vpbTax;
+      totalNetDividends += targetNetWithdrawalPerYear;
+      totalTax += withdrawalTax;
     }
 
-    totalTax += dividendTax + withdrawalTax;
-    totalNetDividends += dividendNet;
-
+    
     const endingBalance = Math.max(0, balanceAfterReturn - grossWithdrawal);
     const costBasisWithdrawn =
       balanceAfterReturn > 0
@@ -184,9 +186,9 @@ function simulateBox2(params: Box2Params): {
       startingBalance,
       contribution,
       totalReturn,
-      dividendGross,
-      dividendTax,
-      dividendNet,
+      dividendGross: inAccumulation ? 0 : grossWithdrawal,
+      dividendTax: inAccumulation ? 0 : withdrawalTax,
+      dividendNet: inAccumulation ? 0 : targetNetWithdrawalPerYear,
       withdrawal: grossWithdrawal,
       withdrawalTax,
       endingBalance,

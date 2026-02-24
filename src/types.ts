@@ -19,6 +19,9 @@ export interface Box3Params extends CommonSimulationParams {
 export interface Box2Params extends CommonSimulationParams {
   /** Box 2: single/couple affects threshold (couple = 2× threshold). */
   householdType: HouseholdType;
+  vpbTier1Threshold: number;
+  vpbTier1Rate: number; // decimal, e.g. 0.19
+  vpbTier2Rate: number; // decimal, e.g. 0.258
   /** Box 2 tier 1 threshold in € (per person; doubled for couple). */
   box2Tier1Threshold: number;
   /** Box 2 tier 1 rate (decimal). */
