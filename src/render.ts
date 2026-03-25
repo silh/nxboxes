@@ -88,7 +88,6 @@ export function renderTable(result: SimulationResult, container: HTMLElement): v
         <th>Box 2 return</th>
         <th>VPB</th>
         <th>Div. net</th>
-        <th>Growth tax</th>
         <th>Box 2 withdraw (gross)</th>
         <th>Box 2 withdraw tax</th>
         <th>Box 2 end</th>
@@ -113,7 +112,6 @@ export function renderTable(result: SimulationResult, container: HTMLElement): v
           <td>${formatNumber(box2.totalReturn)}</td>
           <td>${formatNumber(box2.vpbTax)}</td>
           <td>${formatNumber(box2.dividendNet)}</td>
-          <td>${formatNumber(box2.growthTax)}</td>
           <td>${formatNumber(box2.withdrawal)}</td>
           <td>${formatNumber(box2.withdrawalTax)}</td>
           <td>${formatNumber(box2.endingBalance)}</td>

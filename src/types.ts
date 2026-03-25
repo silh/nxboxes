@@ -47,6 +47,8 @@ export interface Box2YearRow {
   startingBalance: number;
   contribution: number;
   totalReturn: number;
+  /** VPB on the gross Box 2 withdrawal (two-tier bracket). */
+  vpbTax: number;
   dividendGross: number;
   dividendTax: number;
   dividendNet: number;

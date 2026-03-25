@@ -145,40 +145,117 @@ function simulateBox2(params: Box2Params): {
 
     let grossWithdrawal = 0;
     let withdrawalTax = 0;
+    let vpbTax = 0;
+    let dividendGross = 0;
+    let dividendTax = 0;
+    let dividendNet = 0;
 
     if (
       !inAccumulation &&
       targetNetWithdrawalPerYear > 0 &&
       balanceAfterReturn > 0
     ) {
-      // first calculate gross after dividend tax (which applies af VPB)
-      const { gross: grossBeforeVPB, tax: dividendTax } = grossFromNet(
-        targetNetWithdrawalPerYear,
-        box2Tier1Threshold,
-        box2Tier1Rate,
-        box2Tier2Rate,
-      );
-      // then calculate VPB on the gross amount (which applies before dividend tax)
-      const { gross, tax: vpbTax } = grossFromNet(
-        grossBeforeVPB,
-        vpbTier1Threshold,
-        vpbTier1Rate,
-        vpbTier2Rate,
-      );
+      const maxGrossWithdrawal = balanceAfterReturn;
 
-      grossWithdrawal = Math.min(gross, balanceAfterReturn);
-      withdrawalTax = dividendTax + vpbTax;
-      totalNetDividends += targetNetWithdrawalPerYear;
-      totalTax += withdrawalTax;
+      // Evaluate the net cash to the shareholder for a candidate gross withdrawal,
+      // while taxing VPB on the full amount and dividend tax only on the profit portion.
+      const evalForGross = (candidateGrossWithdrawal: number): {
+        netCash: number;
+        vpbTax: number;
+        dividendGross: number;
+        dividendTax: number;
+      } => {
+        if (candidateGrossWithdrawal <= 0) {
+          return { netCash: 0, vpbTax: 0, dividendGross: 0, dividendTax: 0 };
+        }
+
+        // Principal available for this year before any withdrawal is the "cost basis".
+        const principalAvailable = costBasisBeforeReturn;
+
+        // Withdraw principal first: any remaining withdrawal is treated as profit/return.
+        const principalWithdrawn = Math.min(candidateGrossWithdrawal, principalAvailable);
+        const profitWithdrawn = Math.max(0, candidateGrossWithdrawal - principalWithdrawn);
+        const profitShare = candidateGrossWithdrawal > 0 ? profitWithdrawn / candidateGrossWithdrawal : 0;
+
+        const vpb = twoTierTax(
+          candidateGrossWithdrawal,
+          vpbTier1Threshold,
+          vpbTier1Rate,
+          vpbTier2Rate,
+        );
+        const afterVPB = candidateGrossWithdrawal - vpb;
+
+        // Allocate the post-VPB cash between principal and profit in the same ratio,
+        // then apply dividend tax only to the profit part.
+        const dividendBase = profitShare * afterVPB;
+        const divTax = twoTierTax(
+          dividendBase,
+          box2Threshold,
+          box2Tier1Rate,
+          box2Tier2Rate,
+        );
+
+        const netCash = afterVPB - divTax;
+        return {
+          netCash: Math.max(0, netCash),
+          vpbTax: vpb,
+          dividendGross: Math.max(0, dividendBase),
+          dividendTax: divTax,
+        };
+      };
+
+      const evalMax = evalForGross(maxGrossWithdrawal);
+      const targetNet = targetNetWithdrawalPerYear;
+
+      if (evalMax.netCash < targetNet) {
+        // Not enough profit/principal to reach the target net withdrawal.
+        grossWithdrawal = maxGrossWithdrawal;
+        vpbTax = evalMax.vpbTax;
+        dividendGross = evalMax.dividendGross;
+        dividendTax = evalMax.dividendTax;
+        dividendNet = evalMax.netCash;
+        withdrawalTax = vpbTax + dividendTax;
+        totalNetDividends += dividendNet;
+        totalTax += withdrawalTax;
+      } else {
+        // Binary search for a gross withdrawal that yields the target net cash.
+        let low = 0;
+        let high = maxGrossWithdrawal;
+
+        // 60-80 iterations is plenty for JS double precision.
+        for (let i = 0; i < 70; i += 1) {
+          const mid = (low + high) / 2;
+          const { netCash } = evalForGross(mid);
+          if (netCash >= targetNet) {
+            high = mid;
+          } else {
+            low = mid;
+          }
+        }
+
+        const evalLow = evalForGross(low);
+        const evalHigh = evalForGross(high);
+        const useHigh =
+          Math.abs(evalHigh.netCash - targetNet) <= Math.abs(evalLow.netCash - targetNet);
+        const chosen = useHigh ? evalHigh : evalLow;
+
+        grossWithdrawal = useHigh ? high : low;
+        vpbTax = chosen.vpbTax;
+        dividendGross = chosen.dividendGross;
+        dividendTax = chosen.dividendTax;
+        dividendNet = chosen.netCash;
+        withdrawalTax = vpbTax + dividendTax;
+        totalNetDividends += dividendNet;
+        totalTax += withdrawalTax;
+      }
     }
 
     
     const endingBalance = Math.max(0, balanceAfterReturn - grossWithdrawal);
-    const costBasisWithdrawn =
-      balanceAfterReturn > 0
-        ? costBasisBeforeReturn * (grossWithdrawal / balanceAfterReturn)
-        : 0;
-    previousCostBasis = Math.max(0, costBasisBeforeReturn - costBasisWithdrawn);
+
+    // Track remaining cost basis assuming principal is withdrawn first.
+    const principalWithdrawn = Math.min(grossWithdrawal, costBasisBeforeReturn);
+    previousCostBasis = Math.max(0, costBasisBeforeReturn - principalWithdrawn);
     previousEnding = endingBalance;
 
     rows.push({
@@ -186,9 +263,10 @@ function simulateBox2(params: Box2Params): {
       startingBalance,
       contribution,
       totalReturn,
-      dividendGross: inAccumulation ? 0 : grossWithdrawal,
-      dividendTax: inAccumulation ? 0 : withdrawalTax,
-      dividendNet: inAccumulation ? 0 : targetNetWithdrawalPerYear,
+      vpbTax: inAccumulation ? 0 : vpbTax,
+      dividendGross: inAccumulation ? 0 : dividendGross,
+      dividendTax: inAccumulation ? 0 : dividendTax,
+      dividendNet: inAccumulation ? 0 : dividendNet,
       withdrawal: grossWithdrawal,
       withdrawalTax,
       endingBalance,
@@ -235,7 +313,6 @@ export function runSimulation(
         dividendGross: 0,
         dividendTax: 0,
         dividendNet: 0,
-        growthTax: 0,
         withdrawal: 0,
         withdrawalTax: 0,
         endingBalance: 0,
