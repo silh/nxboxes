@@ -1,7 +1,24 @@
 import { CombinedYearRow, SimulationResult } from "./types";
-import { Chart, CategoryScale, LinearScale, LineController, PointElement, LineElement } from "chart.js";
+import {
+  Chart,
+  CategoryScale,
+  LinearScale,
+  LineController,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+} from "chart.js";
   
-Chart.register(CategoryScale, LinearScale, LineController, PointElement, LineElement);
+Chart.register(
+  CategoryScale,
+  LinearScale,
+  LineController,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+);
 
 let chartInstance: any | null = null;
 
@@ -168,6 +185,10 @@ export function renderChart(result: SimulationResult, canvas: HTMLCanvasElement)
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+      mode: "index" as const,
+      intersect: false,
+    },
     plugins: {
       legend: {
         labels: {
@@ -176,10 +197,10 @@ export function renderChart(result: SimulationResult, canvas: HTMLCanvasElement)
         },
       },
       tooltip: {
+        enabled: true,
         callbacks: {
           label(context: any) {
-            const value = context.parsed.y;
-            return `${context.dataset.label}: ${formatCurrency(value)}`;
+            return `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`;
           },
         },
       },
