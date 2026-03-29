@@ -2,14 +2,15 @@
   "name": "nlboxes",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "vite": "^7.3.1"
+    "typescript": "^6.0.2",
+    "vite": "^8.0.3"
   },
   "dependencies": {
     "chart.js": "^4.5.1"

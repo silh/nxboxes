@@ -290,10 +290,6 @@ th {
   border-bottom: 1px solid rgba(148, 163, 184, 0.5);
 }
 
-tbody tr:nth-child(every) {
-  background: transparent;
-}
-
 tbody tr:nth-child(odd) {
   background: rgba(15, 23, 42, 0.7);
 }
