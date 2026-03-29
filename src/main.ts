@@ -3,6 +3,9 @@ import { Box2Params, Box3Params, HouseholdType } from "./types";
 
 const ALLOWANCE_PER_PERSON = 1800;
 
+/** Idle time after typing before re-running the simulation (ms). */
+const IDLE_MS = 300;
+
 function getInputElement<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
   if (!el) {
@@ -93,6 +96,8 @@ export async function initialiseApp() {
 
   const { renderSummary, renderTable, renderChart } = await import("./render");
 
+  let debouncedRunTimeout: ReturnType<typeof setTimeout> | null = null;
+
   const run = () => {
     const { box3Params, box2Params } = parseFormValues();
     const totalYears = box3Params.yearsAccumulating + box3Params.yearsWithdrawing;
@@ -109,8 +114,31 @@ export async function initialiseApp() {
     renderChart(result, chartCanvas);
   };
 
+  const cancelDebouncedRun = () => {
+    if (debouncedRunTimeout !== null) {
+      clearTimeout(debouncedRunTimeout);
+      debouncedRunTimeout = null;
+    }
+  };
+
+  const scheduleDebouncedRun = () => {
+    cancelDebouncedRun();
+    debouncedRunTimeout = setTimeout(() => {
+      debouncedRunTimeout = null;
+      run();
+    }, IDLE_MS);
+  };
+
+  form.addEventListener("input", () => {
+    scheduleDebouncedRun();
+  });
+  form.addEventListener("change", () => {
+    scheduleDebouncedRun();
+  });
+
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+    cancelDebouncedRun();
     run();
   });
 
