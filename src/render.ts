@@ -168,9 +168,16 @@ export function renderChart(result: SimulationResult, canvas: HTMLCanvasElement)
   const { rows } = result;
   if (!rows.length) return;
 
-  const labels = rows.map((row) => `Year ${row.yearIndex}`);
-  const box3Data = rows.map((row) => Math.round(row.box3.endingBalance));
-  const box2Data = rows.map((row) => Math.round(row.box2.endingBalance));
+  const first = rows[0];
+  const labels = ["Year 0", ...rows.map((row) => `Year ${row.yearIndex}`)];
+  const box3Data = [
+    Math.round(first.box3.startingBalance),
+    ...rows.map((row) => Math.round(row.box3.endingBalance)),
+  ];
+  const box2Data = [
+    Math.round(first.box2.startingBalance),
+    ...rows.map((row) => Math.round(row.box2.endingBalance)),
+  ];
 
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
