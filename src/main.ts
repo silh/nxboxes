@@ -32,11 +32,11 @@ function parseFormValues() {
   const yearsAccumulating = Math.max(0, Math.floor(getNumberValue("years-accumulating", 0)));
   const yearsWithdrawing = Math.max(0, Math.floor(getNumberValue("years-withdrawing", 0)));
 
-  const annualReturnPercent = getNumberValue("expected-return", 8);
+  const annualReturnPercent = getNumberValue("expected-return", 7);
   const annualReturnRate = clamp(annualReturnPercent / 100, -1, 1);
 
   const monthlyContribution = Math.max(0, getNumberValue("monthly-contribution", 0));
-  const targetNetWithdrawalPerYear = Math.max(0, getNumberValue("target-net-withdrawal", 0));
+  const targetNetWithdrawalPerYear = Math.max(0, getNumberValue("target-net-withdrawal", 50000));
 
   const householdTypeSelect = getInputElement<HTMLSelectElement>("household-type");
   const householdType = (householdTypeSelect.value as HouseholdType) ?? "single";
