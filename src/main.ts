@@ -43,6 +43,10 @@ function parseFormValues() {
 
   const box3TaxPercent = getNumberValue("box3-tax-rate", 36);
   const box3TaxRate = clamp(box3TaxPercent / 100, 0, 1);
+  const box3AccountingCostPerYear = Math.max(
+    0,
+    getNumberValue("box3-accounting-cost", 200),
+  );
 
   const vpbTier1Threshold = Math.max(0, getNumberValue("vpb-tier1-threshold", 200000));
   const vpbTier1Rate = clamp(getNumberValue("vpb-tier1-rate", 19) / 100, 0, 1);
@@ -51,6 +55,10 @@ function parseFormValues() {
   const box2Tier1Threshold = Math.max(0, getNumberValue("box2-tier1-threshold", 67804));
   const box2Tier1Rate = clamp(getNumberValue("box2-tier1-rate", 24.5) / 100, 0, 1);
   const box2Tier2Rate = clamp(getNumberValue("box2-tier2-rate", 31) / 100, 0, 1);
+  const box2AccountingCostPerYear = Math.max(
+    0,
+    getNumberValue("box2-accounting-cost", 4500),
+  );
 
   const common = {
     initialAmount,
@@ -66,6 +74,7 @@ function parseFormValues() {
     box3TaxRate,
     allowancePerPerson: ALLOWANCE_PER_PERSON,
     householdType,
+    accountingCostPerYear: box3AccountingCostPerYear,
   };
 
   const box2Params: Box2Params = {
@@ -77,6 +86,7 @@ function parseFormValues() {
     box2Tier1Threshold,
     box2Tier1Rate,
     box2Tier2Rate,
+    accountingCostPerYear: box2AccountingCostPerYear,
   };
 
   return { box3Params, box2Params };

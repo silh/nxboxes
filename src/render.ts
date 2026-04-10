@@ -40,7 +40,14 @@ function formatNumber(value: number): string {
 }
 
 export function renderSummary(result: SimulationResult, container: HTMLElement): void {
-  const { rows, box3TotalTax, box2TotalTax, box2TotalNetDividends } = result;
+  const {
+    rows,
+    box3TotalTax,
+    box2TotalTax,
+    box2TotalNetDividends,
+    box2TotalAccountingCosts,
+    box3TotalAccountingCosts,
+  } = result;
   if (rows.length === 0) {
     container.innerHTML = "<p>No data. Please run a simulation.</p>";
     return;
@@ -60,14 +67,20 @@ export function renderSummary(result: SimulationResult, container: HTMLElement):
       <div class="summary-card">
         <h3>Box 3 final balance</h3>
         <div class="summary-value">${formatCurrency(box3Final)}</div>
-        <div class="summary-sub">Total tax paid: ${formatCurrency(box3TotalTax)}</div>
+        <div class="summary-sub">
+          Total tax paid: ${formatCurrency(box3TotalTax)}, accounting costs: ${formatCurrency(
+            box3TotalAccountingCosts,
+          )}
+        </div>
       </div>
       <div class="summary-card">
         <h3>Box 2 final balance</h3>
         <div class="summary-value">${formatCurrency(box2Final)}</div>
         <div class="summary-sub">Tax paid: ${formatCurrency(
           box2TotalTax,
-        )}, net dividends: ${formatCurrency(box2TotalNetDividends)}</div>
+        )}, net dividends: ${formatCurrency(box2TotalNetDividends)}, accounting costs: ${formatCurrency(
+          box2TotalAccountingCosts,
+        )}</div>
       </div>
       <div class="summary-card">
         <h3>Comparison</h3>
@@ -99,6 +112,7 @@ export function renderTable(result: SimulationResult, container: HTMLElement): v
         <th>Box 3 return</th>
         <th>Box 3 tax</th>
         <th>Box 3 withdraw (net)</th>
+        <th>Box 3 accounting cost</th>
         <th>Box 3 end</th>
         <th>Box 2 start</th>
         <th>Box 2 contrib</th>
@@ -107,6 +121,7 @@ export function renderTable(result: SimulationResult, container: HTMLElement): v
         <th>Div. net</th>
         <th>Box 2 withdraw (gross)</th>
         <th>Box 2 withdraw tax</th>
+        <th>Box 2 accounting cost</th>
         <th>Box 2 end</th>
       </tr>
     </thead>
@@ -123,6 +138,7 @@ export function renderTable(result: SimulationResult, container: HTMLElement): v
           <td>${formatNumber(box3.returnBeforeTax)}</td>
           <td>${formatNumber(box3.tax)}</td>
           <td>${formatNumber(box3.withdrawal)}</td>
+          <td>${formatNumber(box3.accountingCost)}</td>
           <td>${formatNumber(box3.endingBalance)}</td>
           <td>${formatNumber(box2.startingBalance)}</td>
           <td>${formatNumber(box2.contribution)}</td>
@@ -131,6 +147,7 @@ export function renderTable(result: SimulationResult, container: HTMLElement): v
           <td>${formatNumber(box2.dividendNet)}</td>
           <td>${formatNumber(box2.withdrawal)}</td>
           <td>${formatNumber(box2.withdrawalTax)}</td>
+          <td>${formatNumber(box2.accountingCost)}</td>
           <td>${formatNumber(box2.endingBalance)}</td>
         </tr>
       `;

@@ -14,6 +14,7 @@ export interface Box3Params extends CommonSimulationParams {
   box3TaxRate: number; // decimal, e.g. 0.36
   allowancePerPerson: number; // e.g. 1800
   householdType: HouseholdType;
+  accountingCostPerYear: number;
 }
 
 export interface Box2Params extends CommonSimulationParams {
@@ -28,6 +29,7 @@ export interface Box2Params extends CommonSimulationParams {
   box2Tier1Rate: number;
   /** Box 2 tier 2 rate (decimal). */
   box2Tier2Rate: number;
+  accountingCostPerYear: number;
 }
 
 export interface Box3YearRow {
@@ -39,6 +41,7 @@ export interface Box3YearRow {
   taxableReturn: number;
   tax: number;
   withdrawal: number;
+  accountingCost: number;
   endingBalance: number;
 }
 
@@ -56,6 +59,7 @@ export interface Box2YearRow {
   withdrawal: number;
   /** Box 2 tax on the withdrawal (two-tier bracket). */
   withdrawalTax: number;
+  accountingCost: number;
   endingBalance: number;
 }
 
@@ -70,5 +74,7 @@ export interface SimulationResult {
   box3TotalTax: number;
   box2TotalTax: number;
   box2TotalNetDividends: number;
+  box2TotalAccountingCosts: number;
+  box3TotalAccountingCosts: number;
 }
 

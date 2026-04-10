@@ -41,6 +41,7 @@ function grossFromNet(
 function simulateBox3(params: Box3Params): {
   rows: Box3YearRow[];
   totalTax: number;
+  totalAccountingCosts: number;
 } {
   const {
     initialAmount,
@@ -52,6 +53,7 @@ function simulateBox3(params: Box3Params): {
     box3TaxRate,
     allowancePerPerson,
     householdType,
+    accountingCostPerYear,
   } = params;
 
   const totalYears = yearsAccumulating + yearsWithdrawing;
@@ -64,11 +66,13 @@ function simulateBox3(params: Box3Params): {
   const rows: Box3YearRow[] = [];
   let previousEnding = initialAmount;
   let totalTax = 0;
+  let totalAccountingCosts = 0;
 
   for (let year = 1; year <= totalYears; year += 1) {
     const inAccumulation = year <= yearsAccumulating;
     const contribution = inAccumulation ? yearlyContribution : 0;
     const withdrawal = !inAccumulation ? yearlyWithdrawal : 0;
+    const accountingCost = accountingCostPerYear;
 
     const startingBalance = previousEnding;
     const balanceBeforeReturn = startingBalance + contribution;
@@ -79,8 +83,9 @@ function simulateBox3(params: Box3Params): {
     totalTax += tax;
 
     const endingBalanceRaw =
-      balanceBeforeReturn + returnBeforeTax - tax - withdrawal;
+      balanceBeforeReturn + returnBeforeTax - tax - withdrawal - accountingCost;
     const endingBalance = Math.max(0, endingBalanceRaw);
+    totalAccountingCosts += accountingCost;
 
     rows.push({
       yearIndex: year,
@@ -91,19 +96,21 @@ function simulateBox3(params: Box3Params): {
       taxableReturn,
       tax,
       withdrawal,
+      accountingCost,
       endingBalance,
     });
 
     previousEnding = endingBalance;
   }
 
-  return { rows, totalTax };
+  return { rows, totalTax, totalAccountingCosts };
 }
 
 function simulateBox2(params: Box2Params): {
   rows: Box2YearRow[];
   totalTax: number;
   totalNetDividends: number;
+  totalAccountingCosts: number;
 } {
   const {
     initialAmount,
@@ -119,6 +126,7 @@ function simulateBox2(params: Box2Params): {
     box2Tier1Threshold,
     box2Tier1Rate,
     box2Tier2Rate,
+    accountingCostPerYear,
   } = params;
 
   const totalYears = yearsAccumulating + yearsWithdrawing;
@@ -131,6 +139,7 @@ function simulateBox2(params: Box2Params): {
   let previousCostBasis = initialAmount;
   let totalTax = 0;
   let totalNetDividends = 0;
+  let totalAccountingCosts = 0;
 
   for (let year = 1; year <= totalYears; year += 1) {
     const inAccumulation = year <= yearsAccumulating;
@@ -143,6 +152,15 @@ function simulateBox2(params: Box2Params): {
 
     const balanceAfterReturn = balanceBeforeReturn + totalReturn;
 
+    const accountingCost = accountingCostPerYear;
+    totalAccountingCosts += accountingCost;
+    const cashAfterCosts = Math.max(0, balanceAfterReturn - accountingCost);
+
+    // Track remaining principal ("cost basis") after paying accounting costs.
+    // Simplification: accounting costs reduce principal first.
+    const principalCostPaid = Math.min(accountingCost, costBasisBeforeReturn);
+    const costBasisAfterCosts = Math.max(0, costBasisBeforeReturn - principalCostPaid);
+
     let grossWithdrawal = 0;
     let withdrawalTax = 0;
     let vpbTax = 0;
@@ -153,9 +171,9 @@ function simulateBox2(params: Box2Params): {
     if (
       !inAccumulation &&
       targetNetWithdrawalPerYear > 0 &&
-      balanceAfterReturn > 0
+      cashAfterCosts > 0
     ) {
-      const maxGrossWithdrawal = balanceAfterReturn;
+      const maxGrossWithdrawal = cashAfterCosts;
 
       // Evaluate the net cash to the shareholder for a candidate gross withdrawal,
       // while taxing VPB on the full amount and dividend tax only on the profit portion.
@@ -170,30 +188,27 @@ function simulateBox2(params: Box2Params): {
         }
 
         // Principal available for this year before any withdrawal is the "cost basis".
-        const principalAvailable = costBasisBeforeReturn;
+        const principalAvailable = costBasisAfterCosts;
 
         // Withdraw principal first: any remaining withdrawal is treated as profit/return.
         const principalWithdrawn = Math.min(candidateGrossWithdrawal, principalAvailable);
         const profitWithdrawn = Math.max(0, candidateGrossWithdrawal - principalWithdrawn);
         const profitShare = candidateGrossWithdrawal > 0 ? profitWithdrawn / candidateGrossWithdrawal : 0;
 
-        const vpb = twoTierTax(
-          candidateGrossWithdrawal,
-          vpbTier1Threshold,
-          vpbTier1Rate,
-          vpbTier2Rate,
-        );
+        // Simplified deductibility: accounting costs reduce tax bases.
+        const vpbTaxableBase = Math.max(0, candidateGrossWithdrawal - accountingCostPerYear);
+        const vpb = twoTierTax(vpbTaxableBase, vpbTier1Threshold, vpbTier1Rate, vpbTier2Rate);
         const afterVPB = candidateGrossWithdrawal - vpb;
 
         // Allocate the post-VPB cash between principal and profit in the same ratio,
         // then apply dividend tax only to the profit part.
         const dividendBase = profitShare * afterVPB;
-        const divTax = twoTierTax(
-          dividendBase,
-          box2Threshold,
-          box2Tier1Rate,
-          box2Tier2Rate,
-        );
+        const taxableProfitWithdrawn = Math.max(0, profitWithdrawn - accountingCostPerYear);
+        const taxableProfitShare =
+          candidateGrossWithdrawal > 0 ? taxableProfitWithdrawn / candidateGrossWithdrawal : 0;
+        const dividendTaxableBase = taxableProfitShare * afterVPB;
+
+        const divTax = twoTierTax(dividendTaxableBase, box2Threshold, box2Tier1Rate, box2Tier2Rate);
 
         const netCash = afterVPB - divTax;
         return {
@@ -250,12 +265,11 @@ function simulateBox2(params: Box2Params): {
       }
     }
 
-    
-    const endingBalance = Math.max(0, balanceAfterReturn - grossWithdrawal);
+    const endingBalance = Math.max(0, cashAfterCosts - grossWithdrawal);
 
     // Track remaining cost basis assuming principal is withdrawn first.
-    const principalWithdrawn = Math.min(grossWithdrawal, costBasisBeforeReturn);
-    previousCostBasis = Math.max(0, costBasisBeforeReturn - principalWithdrawn);
+    const principalWithdrawn = Math.min(grossWithdrawal, costBasisAfterCosts);
+    previousCostBasis = Math.max(0, costBasisAfterCosts - principalWithdrawn);
     previousEnding = endingBalance;
 
     rows.push({
@@ -269,11 +283,12 @@ function simulateBox2(params: Box2Params): {
       dividendNet: inAccumulation ? 0 : dividendNet,
       withdrawal: grossWithdrawal,
       withdrawalTax,
+      accountingCost,
       endingBalance,
     });
   }
 
-  return { rows, totalTax, totalNetDividends };
+  return { rows, totalTax, totalNetDividends, totalAccountingCosts };
 }
 
 export function runSimulation(
@@ -299,6 +314,7 @@ export function runSimulation(
         taxableReturn: 0,
         tax: 0,
         withdrawal: 0,
+        accountingCost: 0,
         endingBalance: 0,
       } as Box3YearRow);
 
@@ -315,6 +331,7 @@ export function runSimulation(
         dividendNet: 0,
         withdrawal: 0,
         withdrawalTax: 0,
+        accountingCost: 0,
         endingBalance: 0,
       } as Box2YearRow);
 
@@ -330,5 +347,7 @@ export function runSimulation(
     box3TotalTax: box3.totalTax,
     box2TotalTax: box2.totalTax,
     box2TotalNetDividends: box2.totalNetDividends,
+    box2TotalAccountingCosts: box2.totalAccountingCosts,
+    box3TotalAccountingCosts: box3.totalAccountingCosts,
   };
 }
