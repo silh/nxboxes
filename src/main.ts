@@ -52,7 +52,7 @@ function parseFormValues() {
   const vpbTier1Rate = clamp(getNumberValue("vpb-tier1-rate", 19) / 100, 0, 1);
   const vpbTier2Rate = clamp(getNumberValue("vpb-tier2-rate", 25.8) / 100, 0, 1);
 
-  const box2Tier1Threshold = Math.max(0, getNumberValue("box2-tier1-threshold", 67804));
+  const box2Tier1Threshold = Math.max(0, getNumberValue("box2-tier1-threshold", 68843));
   const box2Tier1Rate = clamp(getNumberValue("box2-tier1-rate", 24.5) / 100, 0, 1);
   const box2Tier2Rate = clamp(getNumberValue("box2-tier2-rate", 31) / 100, 0, 1);
   const box2AccountingCostPerYear = Math.max(
